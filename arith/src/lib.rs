@@ -1,4 +1,4 @@
-#![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
+// #![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
 
 mod field;
 pub use field::*;
