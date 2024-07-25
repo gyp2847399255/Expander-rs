@@ -4,6 +4,8 @@ mod bn254;
 pub use bn254::*;
 mod m31_ext;
 pub use m31_ext::*;
+mod msn61_ext;
+pub use msn61_ext::*;
 
 use rand::RngCore;
 
@@ -38,6 +40,7 @@ pub trait Field:
     + for<'a> AddAssign<&'a Self>
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
+    + From<u32>
 {
     /// name
     const NAME: &'static str;
@@ -114,22 +117,22 @@ pub trait Field:
 }
 
 /// A vector of Field elements.
-pub trait VectorizedField: Field {
-    /// pack size, size for each packed PackedBaseField
-    const PACK_SIZE: usize;
+// pub trait VectorizedField: Field {
+//     /// pack size, size for each packed PackedBaseField
+//     const PACK_SIZE: usize;
 
-    /// size of the vector
-    const VECTORIZE_SIZE: usize;
+//     /// size of the vector
+//     const VECTORIZE_SIZE: usize;
 
-    /// type of the packed based field, if applicable
-    type PackedBaseField: Default + Clone;
+//     /// type of the packed based field, if applicable
+//     type PackedBaseField: Default + Clone;
 
-    /// expose the internal elements
-    fn as_packed_slices(&self) -> &[Self::PackedBaseField];
+//     /// expose the internal elements
+//     fn as_packed_slices(&self) -> &[Self::PackedBaseField];
 
-    /// expose the internal elements mutable
-    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField];
-}
+//     /// expose the internal elements mutable
+//     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField];
+// }
 
 /// Serde for Fields
 pub trait FieldSerde {

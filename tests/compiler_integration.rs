@@ -1,6 +1,6 @@
 use std::fs;
 
-use arith::{Field, VectorizedM31};
+use arith::{Field, M31};
 use expander_rs::{Circuit, Config, Prover, Verifier};
 use rand::Rng;
 
@@ -8,11 +8,11 @@ const FILENAME_CIRCUIT: &str = "data/compiler_out/circuit.txt";
 const FILENAME_WITNESS: &str = "data/compiler_out/witness.txt";
 const FILENAME_PROOF: &str = "data/compiler_out/proof.bin";
 
-type F = VectorizedM31;
+type F = M31;
 
 #[test]
 fn test_compiler_format_integration() {
-    let config = Config::m31_config();
+    let config = Config::bn254_config();
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");

@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde, VectorizedField};
+use arith::{Field, FieldSerde};
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
@@ -16,8 +16,7 @@ pub fn sumcheck_prove_gkr_layer<F>(
     config: &Config,
 ) -> (Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)
 where
-    F: VectorizedField + FieldSerde,
-    F::PackedBaseField: Field<BaseField = F::BaseField>,
+    F: Field + FieldSerde,
 {
     let mut helpers = vec![];
     assert_eq!(config.get_num_repetitions(), sp.len());

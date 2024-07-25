@@ -1,5 +1,3 @@
-use arith::{VectorizedField, VectorizedM31};
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
     Raw,
@@ -37,8 +35,6 @@ pub enum FiatShamirHashType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub num_repetitions: usize,
-    pub vectorize_size: usize,
-
     pub field_size: usize,
     pub security_bits: usize,
     pub grinding_bits: usize,
@@ -57,17 +53,12 @@ impl Default for Config {
 
 impl Config {
     pub fn m31_config() -> Self {
-        let mut vectorize_size = 0;
-
         let security_bits = 100;
         let grinding_bits = 10;
         let num_parallel = 16;
 
         let field_size = match FieldType::M31 {
-            FieldType::M31 => {
-                vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
-                31
-            }
+            FieldType::M31 => 31,
             FieldType::BabyBear => 31,
             FieldType::BN254 => 254,
         };
@@ -84,8 +75,7 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            vectorize_size,  // update later
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             num_parallel,
@@ -102,7 +92,7 @@ impl Config {
         let num_parallel = 16;
 
         let field_size = 93;
-        let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
+        // let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
 
         let num_repetitions = 1; // we do not need repetitions for m31_ext3
 
@@ -116,8 +106,8 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            vectorize_size,  // update later
-            field_size,      // update later
+            // vectorize_size,  // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             num_parallel,
@@ -128,8 +118,6 @@ impl Config {
     }
 
     pub fn bn254_config() -> Self {
-        let vectorize_size = 1;
-
         let security_bits = 128;
         let grinding_bits = 0;
         let num_parallel = 16;
@@ -148,8 +136,7 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            vectorize_size,  // update later
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             num_parallel,
