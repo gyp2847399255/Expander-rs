@@ -1,8 +1,8 @@
-#[cfg(target_arch = "x86_64")]
-mod packed_m31_ext;
+// #[cfg(target_arch = "x86_64")]
+// mod packed_m31_ext;
 
-#[cfg(target_arch = "x86_64")]
-pub use packed_m31_ext::PackedM31Ext3;
+// #[cfg(target_arch = "x86_64")]
+// pub use packed_m31_ext::PackedM31Ext3;
 
 use ark_std::Zero;
 use rand::RngCore;
@@ -98,7 +98,7 @@ impl Field for M31Ext3 {
         while !e.is_zero() {
             let b = e & 1;
             if b == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;

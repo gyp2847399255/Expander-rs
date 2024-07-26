@@ -1,6 +1,6 @@
-mod vectorized_m31;
+// mod vectorized_m31;
 use ark_std::Zero;
-pub use vectorized_m31::*;
+// pub use vectorized_m31::*;
 
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;

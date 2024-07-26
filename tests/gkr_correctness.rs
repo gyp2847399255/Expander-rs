@@ -1,5 +1,6 @@
-use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
+use arith::{Field, FieldSerde, Msn61, M31};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
+use halo2curves::bn256::Fr;
 use rand::Rng;
 use sha2::Digest;
 
@@ -7,7 +8,7 @@ const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
 
 #[allow(dead_code)]
-fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
+fn gen_simple_circuit<F: Field>() -> Circuit<F> {
     let mut circuit = Circuit::default();
     let mut l0 = CircuitLayer::default();
     l0.input_var_num = 2;
@@ -39,15 +40,16 @@ fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
 #[test]
 fn test_gkr_correctness() {
     let config = Config::m31_config();
-    test_gkr_correctness_helper::<VectorizedM31>(&config);
+    test_gkr_correctness_helper::<M31>(&config);
     let config = Config::bn254_config();
-    test_gkr_correctness_helper::<VectorizedFr>(&config);
+    test_gkr_correctness_helper::<Fr>(&config);
+    let config = Config::msn61_config();
+    test_gkr_correctness_helper::<Msn61>(&config);
 }
 
 fn test_gkr_correctness_helper<F>(config: &Config)
 where
-    F: VectorizedField + FieldSerde,
-    F::PackedBaseField: Field<BaseField = F::BaseField>,
+    F: Field + FieldSerde,
 {
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
@@ -102,7 +104,7 @@ where
     let rng = &mut rand::thread_rng();
     let random_idx = rng.gen_range(0..bad_proof.bytes.len());
     let random_change = rng.gen_range(1..256) as u8;
-    bad_proof.bytes[random_idx] += random_change;
+    bad_proof.bytes[random_idx] ^= random_change;
     assert!(!verifier.verify(&circuit, &claimed_v, &bad_proof));
     println!("Bad proof rejected.");
 }

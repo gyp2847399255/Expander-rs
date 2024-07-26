@@ -6,9 +6,9 @@ use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
-mod vectorized_bn254;
+// mod vectorized_bn254;
 
-pub use vectorized_bn254::VectorizedFr;
+// pub use vectorized_bn254::VectorizedFr;
 
 impl Field for Fr {
     /// name
