@@ -58,7 +58,7 @@ impl Field for Msn61 {
         while e != 0 {
             let b = e & 1;
             if b == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;
@@ -70,7 +70,7 @@ impl Field for Msn61 {
         if self.is_zero() {
             None
         } else {
-            unimplemented!()
+            Some(self.exp(&Msn61 { v: MSN61_MOD - 2 }))
         }
     }
 
@@ -196,7 +196,7 @@ impl From<u64> for Msn61 {
 
 // when x < p^2, msn61_mod(x) < 2p
 fn msn61_mod(x: u128) -> u64 {
-    (x as u64 & MSN61_MOD) + (x >> 61) as u64
+    (x & MSN61_MOD as u128) as u64 + (x >> 61) as u64
 }
 
 fn msn61_mod_u64(x: u64) -> u64 {
@@ -230,7 +230,7 @@ impl Mul for Msn61 {
 
 impl MulAssign<&Msn61> for Msn61 {
     fn mul_assign(&mut self, rhs: &Msn61) {
-        *self *= rhs
+        *self = *self * rhs
     }
 }
 

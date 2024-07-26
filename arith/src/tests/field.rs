@@ -250,13 +250,8 @@ fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     end_timer!(start);
 }
 
-pub fn random_vectorized_field_tests<F: FieldSerde + Field>(type_name: String) {
+pub fn random_serdes_tests<F: FieldSerde + Field>(_type_name: String) {
     let mut rng = test_rng();
-
-    random_serdes_tests::<F, _>(&mut rng, type_name);
-}
-
-fn random_serdes_tests<F: FieldSerde + Field, R: RngCore>(mut rng: R, _type_name: String) {
     let start = start_timer!(|| format!("expansion {}", _type_name));
     for _ in 0..1000 {
         // convert a into and from bytes

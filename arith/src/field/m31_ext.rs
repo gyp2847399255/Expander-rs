@@ -98,7 +98,7 @@ impl Field for M31Ext3 {
         while !e.is_zero() {
             let b = e & 1;
             if b == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;

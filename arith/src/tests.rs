@@ -1,6 +1,6 @@
 mod bn254;
 mod field;
-mod m31;
+mod msn61;
 
 #[cfg(target_arch = "x86_64")]
 #[test]

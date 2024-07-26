@@ -38,7 +38,6 @@ pub struct Config {
     pub field_size: usize,
     pub security_bits: usize,
     pub grinding_bits: usize,
-    pub num_parallel: usize, // nb_parallel
 
     pub polynomial_commitment_type: PolynomialCommitmentType,
     pub field_type: FieldType, // LATER: consider infer this from trait
@@ -55,7 +54,6 @@ impl Config {
     pub fn m31_config() -> Self {
         let security_bits = 100;
         let grinding_bits = 10;
-        let num_parallel = 16;
 
         let field_size = match FieldType::M31 {
             FieldType::M31 => 31,
@@ -75,10 +73,9 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            field_size, // update later
+            field_size,      // update later
             security_bits,
             grinding_bits,
-            num_parallel,
             polynomial_commitment_type,
             field_type,
             fs_hash,
@@ -89,7 +86,6 @@ impl Config {
     pub fn m31_ext3_config() -> Self {
         let security_bits = 100;
         let grinding_bits = 10;
-        let num_parallel = 16;
 
         let field_size = 93;
         // let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
@@ -110,7 +106,6 @@ impl Config {
             field_size, // update later
             security_bits,
             grinding_bits,
-            num_parallel,
             polynomial_commitment_type,
             field_type,
             fs_hash,
@@ -120,7 +115,6 @@ impl Config {
     pub fn bn254_config() -> Self {
         let security_bits = 128;
         let grinding_bits = 0;
-        let num_parallel = 16;
 
         let field_size = 254;
 
@@ -136,10 +130,32 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            field_size, // update later
+            field_size,      // update later
             security_bits,
             grinding_bits,
-            num_parallel,
+            polynomial_commitment_type,
+            field_type,
+            fs_hash,
+        }
+    }
+
+    pub fn msn61_config() -> Self {
+        let security_bits = 128;
+        let grinding_bits = 0;
+
+        let field_size = 61;
+
+        let num_repetitions = 1;
+
+        let polynomial_commitment_type = PolynomialCommitmentType::Raw;
+        let field_type = FieldType::BN254;
+        let fs_hash = FiatShamirHashType::SHA256;
+
+        Config {
+            num_repetitions, // update later
+            field_size,      // update later
+            security_bits,
+            grinding_bits,
             polynomial_commitment_type,
             field_type,
             fs_hash,
