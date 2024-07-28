@@ -1,9 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde};
+use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 
-use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
+use crate::{
+    gkr_prove, Circuit, CommitmentSerde, Config, GkrScratchpad, PolyCommitProver, Proof, RawCommitmentProver, Transcript
+};
 
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -67,7 +69,14 @@ impl<F: Field + FieldSerde> Prover<F> {
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
-        let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
+        let pc_prover = RawCommitmentProver::new(
+            (),
+            &MultiLinearPoly {
+                var_num: c.layers[0].input_var_num,
+                evals: c.layers[0].input_vals.evals.clone(),
+            },
+        );
+        let commitment = pc_prover.commit();
         let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
         let buffer = unsafe {
             std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
