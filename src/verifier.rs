@@ -5,7 +5,7 @@ use ark_std::{end_timer, start_timer};
 
 use crate::{
     eq_evals_at_primitive, grind, Circuit, CircuitLayer, CommitmentSerde, Config, Gate,
-    PolyCommitVerifier, Proof, RawCommitment, RawCommitmentVerifier, Transcript,
+    PolyCommitVerifier, Proof, Transcript,
 };
 
 fn degree_2_eval<F: Field>(p0: F, p1: F, p2: F, x: F::BaseField) -> F {
@@ -208,28 +208,25 @@ pub fn gkr_verify<F: Field + FieldSerde>(
     (verified, rz0, rz1, claimed_v0, claimed_v1)
 }
 
-pub struct Verifier {
+pub struct Verifier<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> {
     config: Config,
+    pp: PC::Param,
 }
 
-impl Verifier {
-    pub fn new(config: &Config) -> Self {
+impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
+    pub fn new(config: &Config, pp: PC::Param) -> Self {
         Verifier {
             config: config.clone(),
+            pp,
         }
     }
 
-    pub fn verify<F: Field + FieldSerde>(
-        &self,
-        circuit: &Circuit<F>,
-        claimed_v: &[F],
-        proof: &Proof,
-    ) -> bool {
+    pub fn verify(&self, circuit: &Circuit<F>, claimed_v: &[F], proof: &Proof) -> bool {
         let timer = start_timer!(|| "verify");
 
         let poly_size = circuit.layers.first().unwrap().input_vals.evals.len();
-        let commitment = RawCommitment::deserialize_from(&proof.bytes, poly_size);
-        let pc_verifier = RawCommitmentVerifier::new((), commitment.clone());
+        let commitment = PC::Commitment::deserialize_from(&proof.bytes, poly_size);
+        let pc_verifier = PC::new(self.pp.clone(), commitment.clone());
 
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&proof.bytes, commitment.size());
@@ -250,23 +247,17 @@ impl Verifier {
 
         log::info!("GKR verification: {}", verified);
 
-        match self.config.polynomial_commitment_type {
-            crate::PolynomialCommitmentType::Raw => {
-                // for Raw, no need to load from proof
-                for i in 0..self.config.get_num_repetitions() {
-                    log::trace!("rz0[{}].size() = {}", i, rz0[i].len());
-                    // log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
-                    let v1 = pc_verifier.verify(&rz0[i], claimed_v0[i], ());
-                    let v2 = pc_verifier.verify(&rz1[i], claimed_v1[i], ());
+        for i in 0..self.config.get_num_repetitions() {
+            log::trace!("rz0[{}].size() = {}", i, rz0[i].len());
+            // log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
+            let v1 = pc_verifier.verify(&rz0[i], claimed_v0[i], PC::Proof::default());
+            let v2 = pc_verifier.verify(&rz1[i], claimed_v1[i], PC::Proof::default());
 
-                    log::debug!("first commitment verification: {}", v1);
-                    log::debug!("second commitment verification: {}", v2);
+            log::debug!("first commitment verification: {}", v1);
+            log::debug!("second commitment verification: {}", v2);
 
-                    verified &= v1;
-                    verified &= v2;
-                }
-            }
-            _ => todo!(),
+            verified &= v1;
+            verified &= v2;
         }
 
         end_timer!(timer);

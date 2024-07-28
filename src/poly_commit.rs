@@ -16,7 +16,7 @@ pub trait CommitmentSerde {
 pub trait PolyCommitProver<F: Field + FieldSerde> {
     type Param: Clone;
     type Commitment: Clone + Debug + Default + CommitmentSerde;
-    type Proof;
+    type Proof: Default;
 
     fn new(pp: Self::Param, poly: &MultiLinearPoly<F>) -> Self;
     fn commit(&self) -> Self::Commitment;
@@ -26,7 +26,7 @@ pub trait PolyCommitProver<F: Field + FieldSerde> {
 pub trait PolyCommitVerifier<F: Field + FieldSerde> {
     type Param: Clone;
     type Commitment: Clone + Debug + Default + CommitmentSerde;
-    type Proof;
+    type Proof: Default;
 
     fn new(pp: Self::Param, commit: Self::Commitment) -> Self;
     fn verify(&self, point: &[F::BaseField], eval: F,  proof: Self::Proof) -> bool;

@@ -71,7 +71,7 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for RawCommitmentVerifier<F> {
     type Commitment = RawCommitment<F>;
     type Proof = ();
 
-    fn new(pp: Self::Param, commit: RawCommitment<F>) -> Self {
+    fn new(_pp: Self::Param, commit: RawCommitment<F>) -> Self {
         RawCommitmentVerifier { commit }
     }
 
