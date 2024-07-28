@@ -1,5 +1,8 @@
 use arith::{Field, FieldSerde, Msn61, M31};
-use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, RawCommitmentProver, RawCommitmentVerifier, Verifier};
+use expander_rs::{
+    raw::RawCommitmentProver, raw::RawCommitmentVerifier, Circuit, CircuitLayer, Config, GateAdd,
+    GateMul, Prover, Verifier,
+};
 use halo2curves::bn256::Fr;
 use rand::Rng;
 use sha2::Digest;

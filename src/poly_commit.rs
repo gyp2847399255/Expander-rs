@@ -1,11 +1,10 @@
 pub mod raw;
+pub mod shuffle;
 use std::fmt::Debug;
 
 use arith::{Field, FieldSerde, MultiLinearPoly};
 
 use crate::Transcript;
-
-pub use self::raw::*;
 
 pub trait CommitmentSerde {
     fn size(&self) -> usize;

@@ -1,7 +1,9 @@
 use std::fs;
 
 use arith::{Field, M31};
-use expander_rs::{Circuit, Config, Prover, RawCommitmentProver, RawCommitmentVerifier, Verifier};
+use expander_rs::{
+    raw::RawCommitmentProver, raw::RawCommitmentVerifier, Circuit, Config, Prover, Verifier,
+};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/compiler_out/circuit.txt";
