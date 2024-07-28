@@ -1,7 +1,7 @@
 use std::fs;
 
 use arith::{Field, M31};
-use expander_rs::{Circuit, Config, Prover, Verifier};
+use expander_rs::{Circuit, Config, Prover, RawCommitmentProver, RawCommitmentVerifier, Verifier};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/compiler_out/circuit.txt";
@@ -25,14 +25,14 @@ fn test_compiler_format_integration() {
     let last_layer_first_output = last_layer.output_vals.evals[0];
     assert_eq!(last_layer_first_output, F::zero());
 
-    let mut prover = Prover::new(&config);
+    let mut prover = Prover::<_, RawCommitmentProver<_>>::new(&config, ());
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
     // write proof to file
     fs::write(FILENAME_PROOF, &proof.bytes).expect("Unable to write proof to file.");
 
-    let verifier = Verifier::new(&config);
+    let verifier = Verifier::<_, RawCommitmentVerifier<_>>::new(&config, ());
     println!("Verifier created.");
     assert!(verifier.verify(&circuit, &claimed_v, &proof));
     println!("Correct proof verified.");

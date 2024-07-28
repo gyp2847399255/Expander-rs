@@ -1,9 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde};
+use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 
-use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
+use crate::{
+    gkr_prove, Circuit, CommitmentSerde, Config, GkrScratchpad, PolyCommitProver, Proof, Transcript
+};
 
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -25,13 +27,14 @@ pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
     end_timer!(timer);
 }
 
-pub struct Prover<F: Field + FieldSerde> {
+pub struct Prover<F: Field + FieldSerde, PC: PolyCommitProver<F>> {
     config: Config,
     sp: Vec<GkrScratchpad<F>>,
+    pp: PC::Param
 }
 
-impl<F: Field + FieldSerde> Prover<F> {
-    pub fn new(config: &Config) -> Self {
+impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
+    pub fn new(config: &Config, pp: PC::Param) -> Self {
         // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
         assert_eq!(
@@ -41,6 +44,7 @@ impl<F: Field + FieldSerde> Prover<F> {
         Prover {
             config: config.clone(),
             sp: Vec::new(),
+            pp
         }
     }
 
@@ -67,7 +71,14 @@ impl<F: Field + FieldSerde> Prover<F> {
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
-        let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
+        let pc_prover = PC::new(
+            self.pp.clone(),
+            &MultiLinearPoly {
+                var_num: c.layers[0].input_var_num,
+                evals: c.layers[0].input_vals.evals.clone(),
+            },
+        );
+        let commitment = pc_prover.commit();
         let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
         let buffer = unsafe {
             std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
@@ -79,14 +90,6 @@ impl<F: Field + FieldSerde> Prover<F> {
         grind::<F>(&mut transcript, &self.config);
 
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
-
-        // open
-        match self.config.polynomial_commitment_type {
-            crate::config::PolynomialCommitmentType::Raw => {
-                // no need to update transcript
-            }
-            _ => todo!(),
-        }
 
         end_timer!(timer);
         (claimed_v, transcript.proof)
