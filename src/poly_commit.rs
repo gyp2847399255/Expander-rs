@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use arith::{Field, FieldSerde, MultiLinearPoly};
 
-use crate::Transcript;
+use crate::{Proof, Transcript};
 
 pub trait CommitmentSerde {
     fn size(&self) -> usize;
@@ -15,18 +15,22 @@ pub trait CommitmentSerde {
 pub trait PolyCommitProver<F: Field + FieldSerde> {
     type Param: Clone;
     type Commitment: Clone + Debug + Default + CommitmentSerde;
-    type Proof: Default;
 
     fn new(pp: Self::Param, poly: &MultiLinearPoly<F>) -> Self;
     fn commit(&self) -> Self::Commitment;
-    fn open(&self, point: &[F::BaseField], transcript: &mut Transcript) -> (F, Self::Proof);
+    fn open(&self, point: &[F::BaseField], transcript: &mut Transcript); // -> Self::Proof;
 }
 
 pub trait PolyCommitVerifier<F: Field + FieldSerde> {
     type Param: Clone;
     type Commitment: Clone + Debug + Default + CommitmentSerde;
-    type Proof: Default;
 
     fn new(pp: Self::Param, commit: Self::Commitment) -> Self;
-    fn verify(&self, point: &[F::BaseField], eval: F,  proof: Self::Proof) -> bool;
+    fn verify(
+        &self,
+        point: &[F::BaseField],
+        eval: F,
+        transcript: &mut Transcript,
+        proof: &mut Proof,
+    ) -> bool;
 }

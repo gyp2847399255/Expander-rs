@@ -1,7 +1,7 @@
 use arith::{Field, FieldSerde, Msn61, M31};
 use expander_rs::{
-    raw::RawCommitmentProver, raw::RawCommitmentVerifier, Circuit, CircuitLayer, Config, GateAdd,
-    GateMul, Prover, Verifier,
+    shuffle::{ShufflePcProver, ShufflePcVerifier},
+    Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier,
 };
 use halo2curves::bn256::Fr;
 use rand::Rng;
@@ -75,7 +75,7 @@ where
     // println!("Output: {:?}", circuit.layers.last().unwrap().output_vals.evals);
     println!("Circuit evaluated.");
 
-    let mut prover = Prover::<_, RawCommitmentProver<_>>::new(&config, ());
+    let mut prover = Prover::<_, ShufflePcProver<_>>::new(&config, ());
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
@@ -99,7 +99,7 @@ where
     println!();
 
     // Verify
-    let verifier = Verifier::<_, RawCommitmentVerifier<_>>::new(&config, ());
+    let verifier = Verifier::<_, ShufflePcVerifier<_>>::new(&config, ());
     println!("Verifier created.");
     assert!(verifier.verify(&circuit, &claimed_v, &proof));
     println!("Correct proof verified.");

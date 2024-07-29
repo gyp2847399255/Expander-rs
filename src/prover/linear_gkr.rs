@@ -4,7 +4,7 @@ use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    gkr_prove, Circuit, CommitmentSerde, Config, GkrScratchpad, PolyCommitProver, Proof, Transcript
+    gkr_prove, Circuit, CommitmentSerde, Config, GkrScratchpad, PolyCommitProver, Proof, Transcript,
 };
 
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
@@ -30,7 +30,7 @@ pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
 pub struct Prover<F: Field + FieldSerde, PC: PolyCommitProver<F>> {
     config: Config,
     sp: Vec<GkrScratchpad<F>>,
-    pp: PC::Param
+    pp: PC::Param,
 }
 
 impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
@@ -44,7 +44,7 @@ impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
         Prover {
             config: config.clone(),
             sp: Vec::new(),
-            pp
+            pp,
         }
     }
 
@@ -89,7 +89,12 @@ impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
 
         grind::<F>(&mut transcript, &self.config);
 
-        let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+        let (claimed_v, rz0s, rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+
+        for i in 0..self.config.get_num_repetitions() {
+            pc_prover.open(&rz0s[i], &mut transcript);
+            pc_prover.open(&rz1s[i], &mut transcript)
+        }
 
         end_timer!(timer);
         (claimed_v, transcript.proof)
