@@ -3,6 +3,8 @@
 
 use arith::{Field, FieldSerde, MultiLinearPoly};
 
+use crate::{Proof, Transcript};
+
 use super::{CommitmentSerde, PolyCommitProver, PolyCommitVerifier};
 
 pub struct RawOpening {}
@@ -38,7 +40,6 @@ pub struct RawCommitmentProver<F: Field> {
 impl<F: Field + FieldSerde> PolyCommitProver<F> for RawCommitmentProver<F> {
     type Param = ();
     type Commitment = RawCommitment<F>;
-    type Proof = ();
 
     fn new(_pp: Self::Param, poly: &MultiLinearPoly<F>) -> Self {
         RawCommitmentProver { poly: poly.clone() }
@@ -50,16 +51,7 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for RawCommitmentProver<F> {
         }
     }
 
-    fn open(
-        &self,
-        point: &[F::BaseField],
-        _transcript: &mut crate::Transcript,
-    ) -> (F, Self::Proof) {
-        (
-            MultiLinearPoly::eval_multilinear(&self.poly.evals, point),
-            (),
-        )
-    }
+    fn open(&self, _point: &[F::BaseField], _transcript: &mut Transcript) {}
 }
 
 pub struct RawCommitmentVerifier<F: Field> {
@@ -69,13 +61,18 @@ pub struct RawCommitmentVerifier<F: Field> {
 impl<F: Field + FieldSerde> PolyCommitVerifier<F> for RawCommitmentVerifier<F> {
     type Param = ();
     type Commitment = RawCommitment<F>;
-    type Proof = ();
 
     fn new(_pp: Self::Param, commit: RawCommitment<F>) -> Self {
         RawCommitmentVerifier { commit }
     }
 
-    fn verify(&self, point: &[<F as Field>::BaseField], eval: F, _proof: Self::Proof) -> bool {
+    fn verify(
+        &self,
+        point: &[<F as Field>::BaseField],
+        eval: F,
+        _transcript: &mut Transcript,
+        _proof: &mut Proof,
+    ) -> bool {
         eval == MultiLinearPoly::eval_multilinear(&self.commit.poly_vals, point)
     }
 }

@@ -62,4 +62,10 @@ impl Transcript {
     pub fn challenge_fs<F: Field>(&mut self, size: usize) -> Vec<F::BaseField> {
         (0..size).map(|_| self.challenge_f::<F>()).collect()
     }
+
+    pub fn challenge_fext<F: Field>(&mut self) -> F {
+        self.hash_to_digest();
+        assert!(F::SIZE <= Self::DIGEST_SIZE);
+        F::from_uniform_bytes(&self.digest)
+    }
 }

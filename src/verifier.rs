@@ -246,12 +246,9 @@ impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
         );
 
         log::info!("GKR verification: {}", verified);
-
         for i in 0..self.config.get_num_repetitions() {
-            log::trace!("rz0[{}].size() = {}", i, rz0[i].len());
-            // log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
-            let v1 = pc_verifier.verify(&rz0[i], claimed_v0[i], PC::Proof::default());
-            let v2 = pc_verifier.verify(&rz1[i], claimed_v1[i], PC::Proof::default());
+            let v1 = pc_verifier.verify(&rz0[i], claimed_v0[i], &mut transcript, &mut proof);
+            let v2 = pc_verifier.verify(&rz1[i], claimed_v1[i], &mut transcript, &mut proof);
 
             log::debug!("first commitment verification: {}", v1);
             log::debug!("second commitment verification: {}", v2);
