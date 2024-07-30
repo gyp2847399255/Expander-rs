@@ -6,9 +6,7 @@ use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
-// mod vectorized_bn254;
-
-// pub use vectorized_bn254::VectorizedFr;
+use super::TwoAdicField;
 
 impl Field for Fr {
     /// name
@@ -64,8 +62,18 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, _exponent: &Self) -> Self {
-        unimplemented!()
+    fn exp(&self, mut exponent: usize) -> Self {
+        let mut res = Self::one();
+        let mut t = *self;
+        while exponent != 0 {
+            let b = exponent & 1;
+            if b == 1 {
+                res *= t;
+            }
+            t = t * t;
+            exponent >>= 1;
+        }
+        res
     }
 
     /// find the inverse of the element; return None if not exist
@@ -121,4 +129,9 @@ impl FieldSerde for Fr {
     fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
         Fr::deserialize_from(bytes) // same as deserialize_from
     }
+}
+
+impl TwoAdicField for Fr {
+    const LOG_ORDER: u32 = Fr::S;
+    const ROOT_OF_UNITY: Self = <Fr as PrimeField>::ROOT_OF_UNITY;
 }

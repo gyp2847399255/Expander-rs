@@ -2,8 +2,8 @@ use crate::FieldSerde;
 use halo2curves::bn256::Fr;
 
 use super::field::{
-    random_field_tests, random_inversion_tests, random_serdes_tests, random_small_field_tests,
-    test_basic_field_op,
+    fft_field_tests, random_field_tests, random_inversion_tests, random_serdes_tests,
+    random_small_field_tests, test_basic_field_op,
 };
 
 #[test]
@@ -28,6 +28,11 @@ fn test_packed_bn254_basic_field_op() {
 #[test]
 fn test_vectorize_bn254_basic_field_op() {
     test_basic_field_op::<Fr>();
+}
+
+#[test]
+fn test_vectorize_bn254_root() {
+    fft_field_tests::<Fr>();
 }
 
 #[test]

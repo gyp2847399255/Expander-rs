@@ -106,14 +106,14 @@ impl Field for M31 {
         (rng.next_u32() & 1).into()
     }
 
-    fn exp(&self, exponent: &Self) -> Self {
-        let mut e = exponent.v;
+    fn exp(&self, exponent: usize) -> Self {
+        let mut e = exponent;
         let mut res = Self::one();
         let mut t = *self;
         while !e.is_zero() {
             let b = e & 1;
             if b == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;

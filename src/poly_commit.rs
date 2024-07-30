@@ -1,5 +1,6 @@
 pub mod raw;
 pub mod shuffle;
+pub mod deepfold;
 use std::fmt::Debug;
 
 use arith::{Field, FieldSerde, MultiLinearPoly};

@@ -86,13 +86,8 @@ impl Field for M31Ext3 {
         }
     }
 
-    fn exp(&self, exponent: &Self) -> Self {
-        // raise to the exp only when exponent is a base field element
-        if !exponent.v[1].is_zero() || !exponent.v[2].is_zero() {
-            panic!("exponentiation is not supported for M31Ext3");
-        }
-
-        let mut e = exponent.v[0].v;
+    fn exp(&self, exponent: usize) -> Self {
+        let mut e = exponent;
         let mut res = Self::one();
         let mut t = *self;
         while !e.is_zero() {

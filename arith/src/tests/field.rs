@@ -1,7 +1,7 @@
 use ark_std::{end_timer, start_timer, test_rng};
 use rand::{Rng, RngCore};
 
-use crate::{Field, FieldSerde};
+use crate::{Field, FieldSerde, TwoAdicField};
 
 pub(crate) fn test_basic_field_op<F: Field>() {
     let mut rng = rand::thread_rng();
@@ -81,6 +81,11 @@ pub fn random_field_tests<F: Field>(type_name: String) {
         a.add_assign(&F::zero());
         assert_eq!(a, copy);
     }
+}
+
+pub fn fft_field_tests<F: TwoAdicField>() {
+    let root = F::ROOT_OF_UNITY;
+    assert_eq!(root.exp(1usize << F::LOG_ORDER), 1.into())
 }
 
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
