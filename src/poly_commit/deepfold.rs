@@ -1,6 +1,11 @@
-use arith::{as_bytes_vec, mul_group::Radix2Group, Field, FieldSerde, TwoAdicField};
+use arith::{
+    as_bytes_vec, mul_group::Radix2Group, Field, FieldSerde, MultiLinearPoly, TwoAdicField,
+};
 
-use crate::merkle_tree::{MerkleTreeProver, MerkleTreeVerifier, HASH_SIZE};
+use crate::{
+    merkle_tree::{MerkleTreeProver, MerkleTreeVerifier, HASH_SIZE},
+    Transcript,
+};
 
 use super::{CommitmentSerde, PolyCommitProver};
 
@@ -27,6 +32,7 @@ impl CommitmentSerde for MerkleRoot {
 pub struct DeepFoldParam<F: TwoAdicField + FieldSerde> {
     mult_subgroups: Vec<Radix2Group<F>>,
     variable_num: usize,
+    query_num: usize,
 }
 
 #[derive(Clone)]
@@ -114,29 +120,99 @@ impl<F: TwoAdicField + FieldSerde> InterpolateValue<F> {
 }
 
 pub struct DeepFoldProver<F: TwoAdicField + FieldSerde> {
-    interpolations: Vec<InterpolateValue<F>>,
-    final_value: Option<F>,
+    interpolation: InterpolateValue<F>,
+    poly: MultiLinearPoly<F>,
+}
+
+impl<F: TwoAdicField + FieldSerde> DeepFoldProver<F> {
+    fn evaluate_next_domain(
+        last_interpolation: &InterpolateValue<F>,
+        pp: &DeepFoldParam<F>,
+        round: usize,
+        challenge: F,
+    ) -> Vec<F> {
+        let mut res = vec![];
+        let len = pp.mult_subgroups[round].size();
+        let get_folding_value = &last_interpolation.value;
+        let subgroup = &pp.mult_subgroups[round];
+        for i in 0..(len / 2) {
+            let x = get_folding_value[i];
+            let nx = get_folding_value[i + len / 2];
+            let sum = x + nx;
+            let new_v = sum + challenge * ((x - nx) * subgroup.element_inv_at(i) + sum);
+            res.push(new_v.mul_base_elem(&F::BaseField::INV_2));
+        }
+        res
+    }
 }
 
 impl<F: TwoAdicField + FieldSerde> PolyCommitProver<F> for DeepFoldProver<F> {
     type Param = DeepFoldParam<F>;
     type Commitment = MerkleRoot;
 
-    fn new(pp: Self::Param, poly: &arith::MultiLinearPoly<F>) -> Self {
+    fn new(pp: &Self::Param, poly: &arith::MultiLinearPoly<F>) -> Self {
         DeepFoldProver {
-            interpolations: vec![InterpolateValue::new(
-                pp.mult_subgroups[0].fft(poly.evals.clone()),
-                2,
-            )],
-            final_value: None,
+            interpolation: InterpolateValue::new(pp.mult_subgroups[0].fft(poly.evals.clone()), 2),
+            poly: poly.clone(),
         }
     }
 
     fn commit(&self) -> Self::Commitment {
-        MerkleRoot(self.interpolations[0].commit())
+        MerkleRoot(self.interpolation.commit())
     }
 
-    fn open(&self, point: &[<F as Field>::BaseField], transcript: &mut crate::Transcript) {
-        
+    fn open(
+        &self,
+        pp: &DeepFoldParam<F>,
+        point: &[<F as Field>::BaseField],
+        transcript: &mut Transcript,
+    ) {
+        let mut poly_evals = self.poly.evals.clone();
+        let mut interpolations = vec![];
+        for i in 0..pp.variable_num {
+            let mut new_point = point[i..].to_vec();
+            new_point[0] += F::BaseField::one();
+            transcript.append_f(MultiLinearPoly::eval_multilinear(&poly_evals, &new_point));
+            let challenge = transcript.challenge_fext();
+            let new_len = poly_evals.len() / 2;
+            for j in 0..new_len {
+                poly_evals[j] =
+                    poly_evals[j * 2] + (poly_evals[j * 2 + 1] - poly_evals[j * 2]) * challenge;
+            }
+            poly_evals.truncate(new_len);
+            let next_evaluation = Self::evaluate_next_domain(
+                if i == 0 {
+                    &self.interpolation
+                } else {
+                    &interpolations[i - 1]
+                },
+                pp,
+                i,
+                challenge,
+            );
+            if i < pp.variable_num - 1 {
+                let new_interpolation = InterpolateValue::new(next_evaluation, 2);
+                transcript.append_u8_slice(&new_interpolation.commit(), HASH_SIZE);
+                interpolations.push(new_interpolation);
+            } else {
+                transcript.append_f(next_evaluation[0]);
+            }
+        }
+        let mut leaf_indices = transcript.challenge_usizes(pp.query_num);
+        for i in 0..pp.variable_num {
+            let len = pp.mult_subgroups[i].size();
+            leaf_indices = leaf_indices.iter_mut().map(|v| *v % (len >> 1)).collect();
+            leaf_indices.sort();
+            leaf_indices.dedup();
+            let query = if i == 0 {
+                self.interpolation.query(&leaf_indices)
+            } else {
+                interpolations[i - 1].query(&leaf_indices)
+            };
+            transcript.append_u8_slice(&query.proof_bytes, query.proof_bytes.len());
+            for i in query.proof_values {
+                transcript.append_f(i);
+            }
+        }
     }
 }

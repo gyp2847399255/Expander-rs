@@ -12,7 +12,7 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for ShufflePcProver<F> {
     type Param = ();
     type Commitment = RawCommitment<F>;
 
-    fn new(_pp: Self::Param, poly: &MultiLinearPoly<F>) -> Self {
+    fn new(_pp: &(), poly: &MultiLinearPoly<F>) -> Self {
         ShufflePcProver { poly: poly.clone() }
     }
 
@@ -22,7 +22,7 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for ShufflePcProver<F> {
         }
     }
 
-    fn open(&self, point: &[<F as Field>::BaseField], transcript: &mut Transcript) {
+    fn open(&self, _pp: &(), point: &[<F as Field>::BaseField], transcript: &mut Transcript) {
         let mut poly_evals = self.poly.evals.clone();
         for i in 0..point.len() {
             let mut new_point = point[i..].to_vec();
