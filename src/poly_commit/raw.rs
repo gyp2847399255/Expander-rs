@@ -68,7 +68,7 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for RawCommitmentVerifier<F> {
 
     fn verify(
         &self,
-        pp: &(),
+        _pp: &(),
         point: &[<F as Field>::BaseField],
         eval: F,
         _transcript: &mut Transcript,

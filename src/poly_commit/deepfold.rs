@@ -283,26 +283,21 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitVerifier<F> for DeepFoldVerifier<F>
                 commits[i - 1].proof_length(&leaf_indices)
             });
             let proof_values = (0..leaf_indices.len() * 2)
-                .map(|i| {
-                    let index_len = leaf_indices.len();
-                    if i < index_len {
-                        (leaf_indices[i], proof.get_next_and_step::<F>())
-                    } else {
-                        (
-                            leaf_indices[i - index_len] + len / 2,
-                            proof.get_next_and_step::<F>(),
-                        )
-                    }
-                })
-                .collect();
+                .map(|_| proof.get_next_and_step::<F>())
+                .collect::<Vec<_>>();
+            transcript.append_u8_slice(&proof_bytes, proof_bytes.len());
+            for i in &proof_values {
+                transcript.append_f(*i);
+            }
             let query = QueryResult {
                 proof_bytes,
-                proof_values,
+                proof_values: leaf_indices
+                    .iter()
+                    .map(|&x| x)
+                    .chain(leaf_indices.iter().map(|x| x + len / 2))
+                    .zip(proof_values.into_iter())
+                    .collect(),
             };
-            transcript.append_u8_slice(&query.proof_bytes, query.proof_bytes.len());
-            for i in &query.proof_values {
-                transcript.append_f(*i.1);
-            }
             query_results.push(query);
         }
         drop(leaf_indices);
@@ -315,8 +310,13 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitVerifier<F> for DeepFoldVerifier<F>
             if !query_results[i].verify_merkle_tree(
                 &indices,
                 2,
-                if i == 0 { &self.commit } else { &commits[i] },
+                if i == 0 {
+                    &self.commit
+                } else {
+                    &commits[i - 1]
+                },
             ) {
+                println!("{} {} {}", file!(), line!(), i);
                 return false;
             }
             for j in indices.iter() {
@@ -341,7 +341,6 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitVerifier<F> for DeepFoldVerifier<F>
                 }
             }
         }
-        println!("{} {}", file!(), line!());
         true
     }
 }
