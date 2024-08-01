@@ -52,10 +52,10 @@ impl MerkleTreeProver {
 }
 
 impl MerkleTreeVerifier {
-    pub fn new(leave_number: usize, merkle_root: &[u8; HASH_SIZE]) -> Self {
+    pub fn new(leave_number: usize, merkle_root: [u8; HASH_SIZE]) -> Self {
         Self {
             leave_number,
-            merkle_root: merkle_root.clone(),
+            merkle_root,
         }
     }
 
@@ -64,6 +64,7 @@ impl MerkleTreeVerifier {
     }
 
     pub fn proof_length(&self, indices: &Vec<usize>) -> usize {
+        assert!(indices.is_sorted());
         let mut current_layer_indices = indices.to_vec();
         let mut res = 0;
         for _ in 0..self.leave_number.ilog2() {
@@ -145,7 +146,7 @@ mod tests {
         let leave_number = leaf_values.len();
         let prover = MerkleTreeProver::new(leaf_values);
         let root = prover.commit();
-        let verifier = MerkleTreeVerifier::new(leave_number, &root);
+        let verifier = MerkleTreeVerifier::new(leave_number, root);
         let leaf_indices = vec![2, 3, 4];
         let proof_bytes = prover.open(&leaf_indices);
         assert_eq!(proof_bytes.len(), verifier.proof_length(&leaf_indices));
@@ -156,5 +157,4 @@ mod tests {
         ];
         assert!(verifier.verify(proof_bytes, &leaf_indices, &open_values));
     }
-
 }

@@ -123,7 +123,7 @@ impl FieldSerde for Fr {
     }
 
     fn deserialize_from(buffer: &[u8]) -> Self {
-        Fr::from_bytes(buffer[..Fr::SIZE].try_into().unwrap()).unwrap()
+        Fr::from_bytes(buffer[..Fr::SIZE].try_into().unwrap_or(&[0; Fr::SIZE])).unwrap()
     }
 
     fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {

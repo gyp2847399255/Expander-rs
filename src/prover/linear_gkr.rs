@@ -93,7 +93,7 @@ impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
 
         for i in 0..self.config.get_num_repetitions() {
             pc_prover.open(&self.pp, &rz0s[i], &mut transcript);
-            pc_prover.open(&self.pp,&rz1s[i], &mut transcript)
+            pc_prover.open(&self.pp, &rz1s[i], &mut transcript)
         }
 
         end_timer!(timer);

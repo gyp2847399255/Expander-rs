@@ -160,7 +160,7 @@ pub fn as_bytes_vec<F: Field + FieldSerde>(v: &[F]) -> Vec<u8> {
     let mut buffer = vec![0; F::SIZE * v.len()];
     let mut cnt = 0;
     for i in v.iter() {
-        i.serialize_into(&mut buffer[cnt..]);
+        i.serialize_into(&mut buffer[cnt..cnt + F::SIZE]);
         cnt += F::SIZE;
     }
     buffer

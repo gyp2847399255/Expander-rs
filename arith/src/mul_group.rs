@@ -146,7 +146,10 @@ mod tests {
         let omega = coset.omega;
         for i in 0..30 {
             assert_eq!(coset.element_at(i) * omega, coset.element_at(i + 1));
-            assert_eq!(coset.element_inv_at(i) * omega.inv().unwrap(), coset.element_inv_at(i + 1));
+            assert_eq!(
+                coset.element_inv_at(i) * omega.inv().unwrap(),
+                coset.element_inv_at(i + 1)
+            );
         }
     }
 

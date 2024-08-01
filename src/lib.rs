@@ -1,5 +1,6 @@
 // #![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
 
+#![feature(is_sorted)]
 pub mod circuit;
 pub use circuit::*;
 

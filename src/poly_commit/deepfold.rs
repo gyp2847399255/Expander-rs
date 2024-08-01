@@ -1,13 +1,16 @@
+use std::{collections::HashMap, marker::PhantomData};
+
 use arith::{
     as_bytes_vec, mul_group::Radix2Group, Field, FieldSerde, MultiLinearPoly, TwoAdicField,
 };
+use ark_std::iterable::Iterable;
 
 use crate::{
     merkle_tree::{MerkleTreeProver, MerkleTreeVerifier, HASH_SIZE},
     Transcript,
 };
 
-use super::{CommitmentSerde, PolyCommitProver};
+use super::{CommitmentSerde, PolyCommitProver, PolyCommitVerifier};
 
 #[derive(Debug, Clone, Default)]
 pub struct MerkleRoot([u8; HASH_SIZE]);
@@ -30,15 +33,15 @@ impl CommitmentSerde for MerkleRoot {
 
 #[derive(Debug, Clone)]
 pub struct DeepFoldParam<F: TwoAdicField + FieldSerde> {
-    mult_subgroups: Vec<Radix2Group<F>>,
-    variable_num: usize,
-    query_num: usize,
+    pub mult_subgroups: Vec<Radix2Group<F>>,
+    pub variable_num: usize,
+    pub query_num: usize,
 }
 
 #[derive(Clone)]
 pub struct QueryResult<F: TwoAdicField + FieldSerde> {
     pub proof_bytes: Vec<u8>,
-    pub proof_values: Vec<F>,
+    pub proof_values: HashMap<usize, F>,
 }
 
 impl<F: TwoAdicField + FieldSerde> QueryResult<F> {
@@ -49,11 +52,12 @@ impl<F: TwoAdicField + FieldSerde> QueryResult<F> {
         merkle_verifier: &MerkleTreeVerifier,
     ) -> bool {
         let len = merkle_verifier.leave_number;
-        let leaves: Vec<Vec<u8>> = (0..leaf_indices.len())
+        let leaves: Vec<Vec<u8>> = leaf_indices
+            .iter()
             .map(|i| {
                 as_bytes_vec(
                     &(0..leaf_size)
-                        .map(|j| self.proof_values[i * len + j])
+                        .map(|j| self.proof_values.get(&(i + j * len)).unwrap().clone())
                         .collect::<Vec<_>>(),
                 )
             })
@@ -79,7 +83,7 @@ impl<F: TwoAdicField + FieldSerde> InterpolateValue<F> {
                 .map(|i| {
                     as_bytes_vec::<F>(
                         &(0..leaf_size)
-                            .map(|j| value[len * i + j])
+                            .map(|j| value[len * j + i])
                             .collect::<Vec<_>>(),
                     )
                 })
@@ -100,22 +104,19 @@ impl<F: TwoAdicField + FieldSerde> InterpolateValue<F> {
         self.merkle_tree.commit()
     }
 
-    pub fn query(&self, leaf_indices: &Vec<usize>) -> QueryResult<F> {
+    pub fn query(&self, leaf_indices: &Vec<usize>) -> (Vec<u8>, Vec<F>) {
         let len = self.merkle_tree.leave_num();
         assert_eq!(len * self.leaf_size, self.value.len());
-        let proof_values = leaf_indices
-            .iter()
-            .flat_map(|j| {
-                (0..self.leaf_size)
-                    .map(|i| self.value[j.clone() + len * i])
+        let proof_values = (0..self.leaf_size)
+            .flat_map(|i| {
+                leaf_indices
+                    .iter()
+                    .map(|j| self.value[j.clone() + i * len])
                     .collect::<Vec<_>>()
             })
             .collect();
         let proof_bytes = self.merkle_tree.open(&leaf_indices);
-        QueryResult {
-            proof_bytes,
-            proof_values,
-        }
+        (proof_bytes, proof_values)
     }
 }
 
@@ -139,7 +140,7 @@ impl<F: TwoAdicField + FieldSerde> DeepFoldProver<F> {
             let x = get_folding_value[i];
             let nx = get_folding_value[i + len / 2];
             let sum = x + nx;
-            let new_v = sum + challenge * ((x - nx) * subgroup.element_inv_at(i) + sum);
+            let new_v = sum + challenge * ((x - nx) * subgroup.element_inv_at(i) - sum);
             res.push(new_v.mul_base_elem(&F::BaseField::INV_2));
         }
         res
@@ -209,10 +210,138 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitProver<F> for DeepFoldProver<F> {
             } else {
                 interpolations[i - 1].query(&leaf_indices)
             };
-            transcript.append_u8_slice(&query.proof_bytes, query.proof_bytes.len());
-            for i in query.proof_values {
+            transcript.append_u8_slice(&query.0, query.0.len());
+            for i in query.1 {
                 transcript.append_f(i);
             }
         }
+    }
+}
+
+pub struct DeepFoldVerifier<F: TwoAdicField + FieldSerde> {
+    commit: MerkleTreeVerifier,
+    _data: PhantomData<F>,
+}
+
+impl<F: TwoAdicField + FieldSerde> PolyCommitVerifier<F> for DeepFoldVerifier<F> {
+    type Param = DeepFoldParam<F>;
+    type Commitment = MerkleRoot;
+
+    fn new(pp: Self::Param, commit: Self::Commitment) -> Self {
+        DeepFoldVerifier {
+            commit: MerkleTreeVerifier::new(pp.mult_subgroups[0].size() / 2, commit.0),
+            _data: PhantomData::default(),
+        }
+    }
+
+    fn verify(
+        &self,
+        pp: &DeepFoldParam<F>,
+        point: &[<F as Field>::BaseField],
+        eval: F,
+        transcript: &mut Transcript,
+        proof: &mut crate::Proof,
+    ) -> bool {
+        let mut eval = eval;
+        let mut challenges = vec![];
+        let mut commits = vec![];
+        for i in 0..point.len() {
+            let next_eval = proof.get_next_and_step::<F>();
+            transcript.append_f(next_eval);
+            let challenge = transcript.challenge_fext::<F>();
+
+            eval += challenge.add_base_elem(&-point[i]) * (next_eval - eval);
+            challenges.push(challenge);
+            if i < pp.variable_num - 1 {
+                let merkle_root = proof.get_next_hash();
+                transcript.append_u8_slice(&merkle_root, HASH_SIZE);
+                commits.push(MerkleTreeVerifier::new(
+                    pp.mult_subgroups[i + 1].size() / 2,
+                    merkle_root,
+                ));
+            } else {
+                let final_value = proof.get_next_and_step::<F>();
+                transcript.append_f(final_value);
+                if final_value != eval {
+                    return false;
+                }
+            }
+        }
+
+        let mut leaf_indices = transcript.challenge_usizes(pp.query_num);
+        let mut indices = leaf_indices.clone();
+        let mut query_results = vec![];
+        for i in 0..pp.variable_num {
+            let len = pp.mult_subgroups[i].size();
+            leaf_indices = leaf_indices.iter_mut().map(|v| *v % (len >> 1)).collect();
+            leaf_indices.sort();
+            leaf_indices.dedup();
+
+            let proof_bytes = proof.get_next_slice(if i == 0 {
+                self.commit.proof_length(&leaf_indices)
+            } else {
+                commits[i - 1].proof_length(&leaf_indices)
+            });
+            let proof_values = (0..leaf_indices.len() * 2)
+                .map(|i| {
+                    let index_len = leaf_indices.len();
+                    if i < index_len {
+                        (leaf_indices[i], proof.get_next_and_step::<F>())
+                    } else {
+                        (
+                            leaf_indices[i - index_len] + len / 2,
+                            proof.get_next_and_step::<F>(),
+                        )
+                    }
+                })
+                .collect();
+            let query = QueryResult {
+                proof_bytes,
+                proof_values,
+            };
+            transcript.append_u8_slice(&query.proof_bytes, query.proof_bytes.len());
+            for i in &query.proof_values {
+                transcript.append_f(*i.1);
+            }
+            query_results.push(query);
+        }
+        drop(leaf_indices);
+        for i in 0..pp.variable_num {
+            let len = pp.mult_subgroups[i].size();
+            indices = indices.iter_mut().map(|v| *v % (len >> 1)).collect();
+            indices.sort();
+            indices.dedup();
+
+            if !query_results[i].verify_merkle_tree(
+                &indices,
+                2,
+                if i == 0 { &self.commit } else { &commits[i] },
+            ) {
+                return false;
+            }
+            for j in indices.iter() {
+                let x = query_results[i].proof_values.get(&j).unwrap().clone();
+                let nx = query_results[i]
+                    .proof_values
+                    .get(&(j + len / 2))
+                    .unwrap()
+                    .clone();
+                let sum = x + nx;
+                let new_v = sum
+                    + challenges[i] * ((x - nx) * pp.mult_subgroups[i].element_inv_at(*j) - sum);
+                if i < pp.variable_num - 1 {
+                    if new_v != query_results[i + 1].proof_values[j].double() {
+                        println!("{} {}", file!(), line!());
+                        return false;
+                    }
+                } else {
+                    if new_v.mul_base_elem(&F::BaseField::INV_2) != eval {
+                        return false;
+                    }
+                }
+            }
+        }
+        println!("{} {}", file!(), line!());
+        true
     }
 }

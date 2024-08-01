@@ -52,6 +52,7 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for ShufflePcVerifier<F> {
 
     fn verify(
         &self,
+        pp: &(),
         point: &[<F as Field>::BaseField],
         eval: F,
         transcript: &mut Transcript,

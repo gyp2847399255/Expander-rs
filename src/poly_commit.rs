@@ -1,6 +1,6 @@
+pub mod deepfold;
 pub mod raw;
 pub mod shuffle;
-pub mod deepfold;
 use std::fmt::Debug;
 
 use arith::{Field, FieldSerde, MultiLinearPoly};
@@ -29,6 +29,7 @@ pub trait PolyCommitVerifier<F: Field + FieldSerde> {
     fn new(pp: Self::Param, commit: Self::Commitment) -> Self;
     fn verify(
         &self,
+        pp: &Self::Param,
         point: &[F::BaseField],
         eval: F,
         transcript: &mut Transcript,
