@@ -254,7 +254,6 @@ impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
                 &mut transcript,
                 &mut proof,
             );
-            println!("{} {}", file!(), line!());
             let v2 = pc_verifier.verify(
                 &self.pp,
                 &rz1[i],
