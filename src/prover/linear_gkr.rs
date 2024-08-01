@@ -72,7 +72,7 @@ impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
 
         // PC commit
         let pc_prover = PC::new(
-            self.pp.clone(),
+            &self.pp,
             &MultiLinearPoly {
                 var_num: c.layers[0].input_var_num,
                 evals: c.layers[0].input_vals.evals.clone(),
@@ -92,8 +92,8 @@ impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
         let (claimed_v, rz0s, rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
         for i in 0..self.config.get_num_repetitions() {
-            pc_prover.open(&rz0s[i], &mut transcript);
-            pc_prover.open(&rz1s[i], &mut transcript)
+            pc_prover.open(&self.pp, &rz0s[i], &mut transcript);
+            pc_prover.open(&self.pp, &rz1s[i], &mut transcript)
         }
 
         end_timer!(timer);

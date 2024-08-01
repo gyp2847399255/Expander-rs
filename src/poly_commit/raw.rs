@@ -41,7 +41,7 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for RawCommitmentProver<F> {
     type Param = ();
     type Commitment = RawCommitment<F>;
 
-    fn new(_pp: Self::Param, poly: &MultiLinearPoly<F>) -> Self {
+    fn new(_pp: &Self::Param, poly: &MultiLinearPoly<F>) -> Self {
         RawCommitmentProver { poly: poly.clone() }
     }
 
@@ -51,7 +51,7 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for RawCommitmentProver<F> {
         }
     }
 
-    fn open(&self, _point: &[F::BaseField], _transcript: &mut Transcript) {}
+    fn open(&self, _pp: &(), _point: &[F::BaseField], _transcript: &mut Transcript) {}
 }
 
 pub struct RawCommitmentVerifier<F: Field> {
@@ -68,6 +68,7 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for RawCommitmentVerifier<F> {
 
     fn verify(
         &self,
+        _pp: &(),
         point: &[<F as Field>::BaseField],
         eval: F,
         _transcript: &mut Transcript,

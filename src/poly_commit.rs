@@ -1,3 +1,4 @@
+pub mod deepfold;
 pub mod raw;
 pub mod shuffle;
 use std::fmt::Debug;
@@ -16,9 +17,9 @@ pub trait PolyCommitProver<F: Field + FieldSerde> {
     type Param: Clone;
     type Commitment: Clone + Debug + Default + CommitmentSerde;
 
-    fn new(pp: Self::Param, poly: &MultiLinearPoly<F>) -> Self;
+    fn new(pp: &Self::Param, poly: &MultiLinearPoly<F>) -> Self;
     fn commit(&self) -> Self::Commitment;
-    fn open(&self, point: &[F::BaseField], transcript: &mut Transcript); // -> Self::Proof;
+    fn open(&self, pp: &Self::Param, point: &[F::BaseField], transcript: &mut Transcript); // -> Self::Proof;
 }
 
 pub trait PolyCommitVerifier<F: Field + FieldSerde> {
@@ -28,6 +29,7 @@ pub trait PolyCommitVerifier<F: Field + FieldSerde> {
     fn new(pp: Self::Param, commit: Self::Commitment) -> Self;
     fn verify(
         &self,
+        pp: &Self::Param,
         point: &[F::BaseField],
         eval: F,
         transcript: &mut Transcript,

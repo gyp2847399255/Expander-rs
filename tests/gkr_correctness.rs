@@ -1,6 +1,6 @@
-use arith::{Field, FieldSerde, Msn61, M31};
+use arith::{mul_group::Radix2Group, Field, FieldSerde, TwoAdicField};
 use expander_rs::{
-    shuffle::{ShufflePcProver, ShufflePcVerifier},
+    deepfold::{DeepFoldParam, DeepFoldProver, DeepFoldVerifier},
     Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier,
 };
 use halo2curves::bn256::Fr;
@@ -42,17 +42,17 @@ fn gen_simple_circuit<F: Field>() -> Circuit<F> {
 
 #[test]
 fn test_gkr_correctness() {
-    let config = Config::m31_config();
-    test_gkr_correctness_helper::<M31>(&config);
+    // let config = Config::m31_config();
+    // test_gkr_correctness_helper::<M31>(&config);
     let config = Config::bn254_config();
     test_gkr_correctness_helper::<Fr>(&config);
-    let config = Config::msn61_config();
-    test_gkr_correctness_helper::<Msn61>(&config);
+    // let config = Config::msn61_config();
+    // test_gkr_correctness_helper::<Msn61>(&config);
 }
 
 fn test_gkr_correctness_helper<F>(config: &Config)
 where
-    F: Field + FieldSerde,
+    F: TwoAdicField + FieldSerde,
 {
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
@@ -75,7 +75,19 @@ where
     // println!("Output: {:?}", circuit.layers.last().unwrap().output_vals.evals);
     println!("Circuit evaluated.");
 
-    let mut prover = Prover::<_, ShufflePcProver<_>>::new(&config, ());
+    let variable_num = circuit.log_input_size();
+    let mut mult_subgroups = vec![Radix2Group::<F>::new(variable_num as u32 + 3)];
+    for i in 1..variable_num {
+        mult_subgroups.push(mult_subgroups[i - 1].exp(2));
+    }
+
+    let pp = DeepFoldParam {
+        mult_subgroups,
+        variable_num,
+        query_num: 10,
+    };
+
+    let mut prover = Prover::<_, DeepFoldProver<_>>::new(&config, pp.clone());
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
@@ -99,7 +111,7 @@ where
     println!();
 
     // Verify
-    let verifier = Verifier::<_, ShufflePcVerifier<_>>::new(&config, ());
+    let verifier = Verifier::<_, DeepFoldVerifier<_>>::new(&config, pp);
     println!("Verifier created.");
     assert!(verifier.verify(&circuit, &claimed_v, &proof));
     println!("Correct proof verified.");

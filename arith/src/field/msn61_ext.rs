@@ -51,8 +51,8 @@ impl Field for Msn61 {
         (rng.next_u32() & 1).into()
     }
 
-    fn exp(&self, exponent: &Self) -> Self {
-        let mut e = exponent.v;
+    fn exp(&self, exponent: usize) -> Self {
+        let mut e = exponent;
         let mut res = Self::one();
         let mut t = *self;
         while e != 0 {
@@ -70,7 +70,7 @@ impl Field for Msn61 {
         if self.is_zero() {
             None
         } else {
-            Some(self.exp(&Msn61 { v: MSN61_MOD - 2 }))
+            Some(self.exp(MSN61_MOD as usize - 2))
         }
     }
 

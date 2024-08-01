@@ -134,7 +134,7 @@ impl Field for PackedM31 {
         }
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: usize) -> Self {
         todo!()
     }
 

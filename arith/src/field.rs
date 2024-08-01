@@ -91,7 +91,7 @@ pub trait Field:
     }
 
     /// Exp
-    fn exp(&self, exponent: &Self) -> Self;
+    fn exp(&self, exponent: usize) -> Self;
 
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
@@ -149,4 +149,19 @@ pub trait FieldSerde {
         // add default implementation to avoid duplications when this isn't required
         unimplemented!()
     }
+}
+
+pub trait TwoAdicField: Field {
+    const LOG_ORDER: u32;
+    const ROOT_OF_UNITY: Self;
+}
+
+pub fn as_bytes_vec<F: Field + FieldSerde>(v: &[F]) -> Vec<u8> {
+    let mut buffer = vec![0; F::SIZE * v.len()];
+    let mut cnt = 0;
+    for i in v.iter() {
+        i.serialize_into(&mut buffer[cnt..cnt + F::SIZE]);
+        cnt += F::SIZE;
+    }
+    buffer
 }

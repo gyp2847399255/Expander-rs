@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use arith::{Field, FieldSerde};
 
 use crate::{Proof, SHA256hasher};
@@ -67,5 +69,14 @@ impl Transcript {
         self.hash_to_digest();
         assert!(F::SIZE <= Self::DIGEST_SIZE);
         F::from_uniform_bytes(&self.digest)
+    }
+
+    pub fn challenge_usizes(&mut self, num: usize) -> Vec<usize> {
+        (0..num)
+            .map(|_| {
+                self.hash_to_digest();
+                usize::from_be_bytes(self.digest[0..size_of::<usize>()].try_into().unwrap())
+            })
+            .collect()
     }
 }
