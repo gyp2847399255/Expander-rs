@@ -1,7 +1,6 @@
-use arith::{mul_group::Radix2Group, Field, FieldSerde, Msn61, TwoAdicField, M31};
+use arith::{mul_group::Radix2Group, Field, FieldSerde, TwoAdicField};
 use expander_rs::{
     deepfold::{DeepFoldParam, DeepFoldProver, DeepFoldVerifier},
-    shuffle::{ShufflePcProver, ShufflePcVerifier},
     Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier,
 };
 use halo2curves::bn256::Fr;
