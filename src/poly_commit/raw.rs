@@ -51,7 +51,7 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for RawCommitmentProver<F> {
         }
     }
 
-    fn open(&self, _pp: &(), _point: &[F::BaseField], _transcript: &mut Transcript) {}
+    fn open(&self, _pp: &(), _point: &[F], _transcript: &mut Transcript) {}
 }
 
 pub struct RawCommitmentVerifier<F: Field> {
@@ -69,11 +69,11 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for RawCommitmentVerifier<F> {
     fn verify(
         &self,
         _pp: &(),
-        point: &[<F as Field>::BaseField],
+        point: &[F],
         eval: F,
         _transcript: &mut Transcript,
         _proof: &mut Proof,
     ) -> bool {
-        eval == MultiLinearPoly::eval_multilinear(&self.commit.poly_vals, point)
+        eval == MultiLinearPoly::eval_multilinear_ext(&self.commit.poly_vals, point)
     }
 }

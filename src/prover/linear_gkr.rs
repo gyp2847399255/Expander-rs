@@ -1,10 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
 use arith::{Field, FieldSerde, MultiLinearPoly};
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, iterable::Iterable, start_timer};
 
 use crate::{
-    gkr_prove, Circuit, CommitmentSerde, Config, GkrScratchpad, PolyCommitProver, Proof, Transcript,
+    gkr_prove, merge_multilinear_evals, Circuit, CommitmentSerde, Config, GkrScratchpad,
+    PolyCommitProver, Proof, Transcript,
 };
 
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
@@ -91,10 +92,16 @@ impl<F: Field + FieldSerde, PC: PolyCommitProver<F>> Prover<F, PC> {
 
         let (claimed_v, rz0s, rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
-        for i in 0..self.config.get_num_repetitions() {
-            pc_prover.open(&self.pp, &rz0s[i], &mut transcript);
-            pc_prover.open(&self.pp, &rz1s[i], &mut transcript)
-        }
+        let new_point = merge_multilinear_evals(
+            MultiLinearPoly {
+                var_num: c.layers[0].input_var_num,
+                evals: c.layers[0].input_vals.evals.clone(),
+            },
+            rz0s.into_iter().chain(rz1s.into_iter()).collect(),
+            &mut transcript,
+        );
+
+        pc_prover.open(&self.pp, &new_point, &mut transcript);
 
         end_timer!(timer);
         (claimed_v, transcript.proof)

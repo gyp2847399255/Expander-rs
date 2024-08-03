@@ -84,7 +84,7 @@ where
     let pp = DeepFoldParam {
         mult_subgroups,
         variable_num,
-        query_num: 10,
+        query_num: 30,
     };
 
     let mut prover = Prover::<_, DeepFoldProver<_>>::new(&config, pp.clone());

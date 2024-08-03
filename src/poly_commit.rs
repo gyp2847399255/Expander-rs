@@ -19,7 +19,7 @@ pub trait PolyCommitProver<F: Field + FieldSerde> {
 
     fn new(pp: &Self::Param, poly: &MultiLinearPoly<F>) -> Self;
     fn commit(&self) -> Self::Commitment;
-    fn open(&self, pp: &Self::Param, point: &[F::BaseField], transcript: &mut Transcript); // -> Self::Proof;
+    fn open(&self, pp: &Self::Param, point: &[F], transcript: &mut Transcript); // -> Self::Proof;
 }
 
 pub trait PolyCommitVerifier<F: Field + FieldSerde> {
@@ -30,7 +30,7 @@ pub trait PolyCommitVerifier<F: Field + FieldSerde> {
     fn verify(
         &self,
         pp: &Self::Param,
-        point: &[F::BaseField],
+        point: &[F],
         eval: F,
         transcript: &mut Transcript,
         proof: &mut Proof,

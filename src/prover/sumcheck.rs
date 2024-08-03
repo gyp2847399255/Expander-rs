@@ -1,4 +1,5 @@
-use arith::{Field, FieldSerde};
+use arith::{Field, FieldSerde, MultiLinearPoly};
+use warp::redirect::see_other;
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
@@ -47,9 +48,6 @@ where
             transcript.append_f(evals[2]);
 
             let r = transcript.challenge_f::<F>();
-            if j == 0 {
-                log::trace!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
-            }
             helper.receive_challenge(i_var, r);
             if i_var == layer.input_var_num - 1 {
                 log::trace!("vx claim: {:?}", helper.vx_claim());
@@ -74,4 +72,62 @@ where
         .map(|j| helpers[j].ry.clone()) // FIXME: clone might be avoided
         .collect();
     (rz0s, rz1s)
+}
+
+pub fn merge_multilinear_evals<F: Field + FieldSerde>(
+    poly: MultiLinearPoly<F>,
+    zs: Vec<Vec<F::BaseField>>,
+    transcript: &mut Transcript,
+) -> Vec<F> {
+    let mut eqs: Vec<Vec<<F as Field>::BaseField>> = vec![];
+    for z in zs.iter() {
+        let mut res = vec![F::BaseField::one()];
+        for &b in z.iter().rev() {
+            res = res
+                .iter()
+                .flat_map(|&prod| [prod * (F::BaseField::one() - b), prod * b])
+                .collect();
+        }
+        eqs.push(res);
+    }
+    let r = transcript.challenge_fext::<F>();
+    let mut eq = vec![];
+    for i in 0..eqs[0].len() {
+        let mut res = F::zero();
+        for j in 0..eqs.len() {
+            res = (res * r).add_base_elem(&eqs[j][i]);
+        }
+        eq.push(res);
+    }
+    let mut poly_evals = poly.evals;
+    let var_num = poly.var_num;
+    let mut new_point = vec![];
+    for i in 0..var_num {
+        let m = 1 << (var_num - i);
+        let (sum_0, sum_1, sum_2) = (0..m).step_by(2).fold((F::zero(), F::zero(), F::zero()), |acc, x| {
+            let p_0 = poly_evals[x];
+            let p_1 = poly_evals[x + 1];
+            let e_0 = eq[x];
+            let e_1 = eq[x + 1];
+            (
+                acc.0 + p_0 * e_0,
+                acc.1 + p_1 * e_1,
+                acc.2 + (p_1 + p_1 - p_0) * (e_1 + e_1 - e_0),
+            )
+        });
+        transcript.append_f(sum_0);
+        transcript.append_f(sum_1);
+        transcript.append_f(sum_2);
+        let challenge = transcript.challenge_fext::<F>();
+        new_point.push(challenge);
+        sumcheck_next_domain(&mut poly_evals, m / 2, challenge);
+        sumcheck_next_domain(&mut eq, m / 2, challenge);
+    }
+    new_point
+}
+
+fn sumcheck_next_domain<F: Field>(poly_evals: &mut Vec<F>, m: usize, challenge: F) {
+    for j in 0..m {
+        poly_evals[j] = poly_evals[j * 2] + (poly_evals[j * 2 + 1] - poly_evals[j * 2]) * challenge;
+    }
 }
