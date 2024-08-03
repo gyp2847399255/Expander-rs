@@ -104,17 +104,20 @@ pub fn merge_multilinear_evals<F: Field + FieldSerde>(
     let mut new_point = vec![];
     for i in 0..var_num {
         let m = 1 << (var_num - i);
-        let (sum_0, sum_1, sum_2) = (0..m).step_by(2).fold((F::zero(), F::zero(), F::zero()), |acc, x| {
-            let p_0 = poly_evals[x];
-            let p_1 = poly_evals[x + 1];
-            let e_0 = eq[x];
-            let e_1 = eq[x + 1];
-            (
-                acc.0 + p_0 * e_0,
-                acc.1 + p_1 * e_1,
-                acc.2 + (p_1 + p_1 - p_0) * (e_1 + e_1 - e_0),
-            )
-        });
+        let (sum_0, sum_1, sum_2) =
+            (0..m)
+                .step_by(2)
+                .fold((F::zero(), F::zero(), F::zero()), |acc, x| {
+                    let p_0 = poly_evals[x];
+                    let p_1 = poly_evals[x + 1];
+                    let e_0 = eq[x];
+                    let e_1 = eq[x + 1];
+                    (
+                        acc.0 + p_0 * e_0,
+                        acc.1 + p_1 * e_1,
+                        acc.2 + (p_1 + p_1 - p_0) * (e_1 + e_1 - e_0),
+                    )
+                });
         transcript.append_f(sum_0);
         transcript.append_f(sum_1);
         transcript.append_f(sum_2);
