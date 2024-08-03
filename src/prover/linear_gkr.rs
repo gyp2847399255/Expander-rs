@@ -1,7 +1,7 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
 use arith::{Field, FieldSerde, MultiLinearPoly};
-use ark_std::{end_timer, iterable::Iterable, start_timer};
+use ark_std::{end_timer, start_timer};
 
 use crate::{
     gkr_prove, merge_multilinear_evals, Circuit, CommitmentSerde, Config, GkrScratchpad,

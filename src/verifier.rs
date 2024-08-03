@@ -1,7 +1,7 @@
 use std::vec;
 
 use arith::{Field, FieldSerde};
-use ark_std::{end_timer, iterable::Iterable, start_timer};
+use ark_std::{end_timer, start_timer};
 
 use crate::{
     eq_evals_at_primitive, grind, Circuit, CircuitLayer, CommitmentSerde, Config, Gate,
@@ -291,13 +291,6 @@ impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
             &mut proof,
         );
         let v = pc_verifier.verify(&self.pp, &new_point, claimed_v, &mut transcript, &mut proof);
-
-        //     log::debug!("first commitment verification: {}", v1);
-        //     log::debug!("second commitment verification: {}", v2);
-
-        //     verified &= v1;
-        //     verified &= v2;
-        // }
 
         end_timer!(timer);
 

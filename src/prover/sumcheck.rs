@@ -1,5 +1,4 @@
 use arith::{Field, FieldSerde, MultiLinearPoly};
-use warp::redirect::see_other;
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
@@ -28,7 +27,7 @@ where
     }
 
     for i_var in 0..layer.input_var_num * 2 {
-        for (j, helper) in helpers
+        for (_j, helper) in helpers
             .iter_mut()
             .enumerate()
             .take(config.get_num_repetitions())
