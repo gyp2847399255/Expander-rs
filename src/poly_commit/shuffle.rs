@@ -22,12 +22,15 @@ impl<F: Field + FieldSerde> PolyCommitProver<F> for ShufflePcProver<F> {
         }
     }
 
-    fn open(&self, _pp: &(), point: &[<F as Field>::BaseField], transcript: &mut Transcript) {
+    fn open(&self, _pp: &(), point: &[F], transcript: &mut Transcript) {
         let mut poly_evals = self.poly.evals.clone();
         for i in 0..point.len() {
             let mut new_point = point[i..].to_vec();
-            new_point[0] += F::BaseField::one();
-            transcript.append_f(MultiLinearPoly::eval_multilinear(&poly_evals, &new_point));
+            new_point[0].add_assign_base_elem(&F::BaseField::one());
+            transcript.append_f(MultiLinearPoly::eval_multilinear_ext(
+                &poly_evals,
+                &new_point,
+            ));
             let r = transcript.challenge_fext::<F>();
             let new_len = poly_evals.len() / 2;
             for j in 0..new_len {
@@ -53,7 +56,7 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for ShufflePcVerifier<F> {
     fn verify(
         &self,
         _pp: &(),
-        point: &[<F as Field>::BaseField],
+        point: &[F],
         eval: F,
         transcript: &mut Transcript,
         proof: &mut Proof,
@@ -65,7 +68,7 @@ impl<F: Field + FieldSerde> PolyCommitVerifier<F> for ShufflePcVerifier<F> {
             transcript.append_f(next_eval);
             let r = transcript.challenge_fext::<F>();
 
-            eval += r.add_base_elem(&-point[i]) * (next_eval - eval);
+            eval += (r - point[i]) * (next_eval - eval);
             new_point.push(r);
         }
         eval == MultiLinearPoly::eval_multilinear_ext(&self.commit.poly_vals, &new_point)

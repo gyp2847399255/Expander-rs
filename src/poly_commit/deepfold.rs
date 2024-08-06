@@ -162,18 +162,16 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitProver<F> for DeepFoldProver<F> {
         MerkleRoot(self.interpolation.commit())
     }
 
-    fn open(
-        &self,
-        pp: &DeepFoldParam<F>,
-        point: &[<F as Field>::BaseField],
-        transcript: &mut Transcript,
-    ) {
+    fn open(&self, pp: &DeepFoldParam<F>, point: &[F], transcript: &mut Transcript) {
         let mut poly_evals = self.poly.evals.clone();
         let mut interpolations = vec![];
         for i in 0..pp.variable_num {
             let mut new_point = point[i..].to_vec();
-            new_point[0] += F::BaseField::one();
-            transcript.append_f(MultiLinearPoly::eval_multilinear(&poly_evals, &new_point));
+            new_point[0].add_assign_base_elem(&F::BaseField::one());
+            transcript.append_f(MultiLinearPoly::eval_multilinear_ext(
+                &poly_evals,
+                &new_point,
+            ));
             let challenge = transcript.challenge_fext();
             let new_len = poly_evals.len() / 2;
             for j in 0..new_len {
@@ -237,7 +235,7 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitVerifier<F> for DeepFoldVerifier<F>
     fn verify(
         &self,
         pp: &DeepFoldParam<F>,
-        point: &[<F as Field>::BaseField],
+        point: &[F],
         eval: F,
         transcript: &mut Transcript,
         proof: &mut crate::Proof,
@@ -250,7 +248,7 @@ impl<F: TwoAdicField + FieldSerde> PolyCommitVerifier<F> for DeepFoldVerifier<F>
             transcript.append_f(next_eval);
             let challenge = transcript.challenge_fext::<F>();
 
-            eval += challenge.add_base_elem(&-point[i]) * (next_eval - eval);
+            eval += (challenge - point[i]) * (next_eval - eval);
             challenges.push(challenge);
             if i < pp.variable_num - 1 {
                 let merkle_root = proof.get_next_hash();

@@ -221,6 +221,41 @@ impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
         }
     }
 
+    fn merge_evals(
+        zs: Vec<Vec<F::BaseField>>,
+        ys: &Vec<F>,
+        transcript: &mut Transcript,
+        proof: &mut Proof,
+    ) -> (Vec<F>, F) {
+        let r = transcript.challenge_fext::<F>();
+        let mut sum = ys.iter().fold(F::zero(), |acc, &x| acc * r + x);
+        let var_num = zs[0].len();
+        let mut res = vec![];
+        for _ in 0..var_num {
+            let x_0 = proof.get_next_and_step();
+            transcript.append_f::<F>(x_0);
+            let x_1 = proof.get_next_and_step();
+            transcript.append_f::<F>(x_1);
+            let x_2 = proof.get_next_and_step();
+            transcript.append_f::<F>(x_2);
+            assert_eq!(sum, x_0 + x_1);
+            let challenge = transcript.challenge_fext::<F>();
+            res.push(challenge);
+            sum = x_0 * (F::one() - challenge) * (F::from(2) - challenge) * F::INV_2
+                + x_1 * challenge * (F::from(2) - challenge)
+                + x_2 * challenge * (challenge - F::one()) * F::INV_2;
+        }
+        let eq_prod = zs.iter().fold(F::zero(), |acc, x| {
+            let mut prod = F::one();
+            for i in 0..var_num {
+                let res_x = res[i].mul_base_elem(&x[i]);
+                prod *= res_x + res_x + F::one().add_base_elem(&-x[i]) - res[i];
+            }
+            acc * r + prod
+        });
+        (res, sum * eq_prod.inv().unwrap())
+    }
+
     pub fn verify(&self, circuit: &Circuit<F>, claimed_v: &[F], proof: &Proof) -> bool {
         let timer = start_timer!(|| "verify");
 
@@ -237,7 +272,7 @@ impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
         proof.step(commitment.size() + 256 / 8);
 
-        let (mut verified, rz0, rz1, claimed_v0, claimed_v1) = gkr_verify(
+        let (verified, rz0, rz1, claimed_v0, claimed_v1) = gkr_verify(
             circuit,
             claimed_v,
             &mut transcript,
@@ -246,31 +281,19 @@ impl<F: Field + FieldSerde, PC: PolyCommitVerifier<F>> Verifier<F, PC> {
         );
 
         log::info!("GKR verification: {}", verified);
-        for i in 0..self.config.get_num_repetitions() {
-            let v1 = pc_verifier.verify(
-                &self.pp,
-                &rz0[i],
-                claimed_v0[i],
-                &mut transcript,
-                &mut proof,
-            );
-            let v2 = pc_verifier.verify(
-                &self.pp,
-                &rz1[i],
-                claimed_v1[i],
-                &mut transcript,
-                &mut proof,
-            );
-
-            log::debug!("first commitment verification: {}", v1);
-            log::debug!("second commitment verification: {}", v2);
-
-            verified &= v1;
-            verified &= v2;
-        }
+        let (new_point, claimed_v) = Self::merge_evals(
+            rz0.into_iter().chain(rz1.into_iter()).collect(),
+            &claimed_v0
+                .into_iter()
+                .chain(claimed_v1.into_iter())
+                .collect(),
+            &mut transcript,
+            &mut proof,
+        );
+        let v = pc_verifier.verify(&self.pp, &new_point, claimed_v, &mut transcript, &mut proof);
 
         end_timer!(timer);
 
-        verified
+        verified & v
     }
 }
